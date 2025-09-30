@@ -17,14 +17,13 @@ stages:
   - job: BuildAndDeployJob
     displayName: Build and Deploy
     pool:
-      vmImage: 'windows-latest'   # 👈 use windows agent
+      vmImage: 'windows-latest'   # Windows agent
 
     steps:
     - powershell: |
         Write-Output "Starting pipeline..."
       displayName: 'Start Pipeline'
 
-    # Build image in ACR
     - task: AzureCLI@2
       displayName: 'Build image in ACR'
       inputs:
@@ -32,9 +31,9 @@ stages:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
+          Write-Output "Building Docker image in ACR..."
           az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
 
-    # Deploy to AKS
     - task: AzureCLI@2
       displayName: 'Deploy to AKS'
       inputs:
@@ -42,10 +41,13 @@ stages:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
+          Write-Output "Connecting to AKS..."
           az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
 
-          # update deployment with new image
+          Write-Output "Updating deployment with new image..."
           kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId)
 
-          # wait until rollout is complete
+          Write-Output "Waiting for rollout to finish..."
           kubectl rollout status deployment/mydotnetapp
+
+          Write-Output "Deployment complete."

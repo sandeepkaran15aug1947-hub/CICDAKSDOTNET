@@ -19,7 +19,7 @@ variables:
   imagePullSecret: 'myacr123456rfce3-auth'
 
   # Agent VM image name
-  vmImageName: 'ubuntu-latest'
+  name: 'sandaks'
 
 
 stages:

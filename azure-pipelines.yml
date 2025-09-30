@@ -4,47 +4,34 @@ trigger:
       - main
 
 variables:
-  acrName: 'myacr123456r'
-  resourceGroup: 'myResourceGroup'
-  aksCluster: 'myAksCluster'
-  imageName: 'mydotnetapp'
-  azureServiceConnection: 'cicdak'
+  acrName: 'myacr123456r'                # your ACR name (no .azurecr.io)
+  resourceGroup: 'myResourceGroup'       # your Resource Group
+  aksCluster: 'myAksCluster'             # your AKS cluster name
+  imageName: 'mydotnetapp'               # repository name in ACR
+  azureServiceConnection: 'cicdak'       # service connection name in Azure DevOps
 
 stages:
 - stage: BuildAndDeploy
-  displayName: Build Docker image locally and Deploy to AKS
+  displayName: Build (ACR) + Deploy (AKS)
   jobs:
   - job: BuildAndDeployJob
-    displayName: Build and Deploy
+    displayName: Build image in ACR and deploy to AKS
     pool:
-      name: 'aks'   # 👈 your Windows self-hosted agent
-
+      name: aks   # or windows-latest if your org needs it
     steps:
-    - powershell: |
-        Write-Output "Starting pipeline..."
-      displayName: 'Start Pipeline'
 
-    # Login to ACR
+    # 1) Build & push image to ACR
     - task: AzureCLI@2
-      displayName: 'Login to ACR'
+      displayName: 'Build image in ACR'
       inputs:
         azureSubscription: $(azureServiceConnection)
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-          Write-Output "Logging in to ACR..."
-          az acr login --name $(acrName)
+          Write-Output "Building image in ACR..."
+          az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
 
-    # Build & Push image locally
-    - powershell: |
-        Write-Output "Building Docker image locally..."
-        docker build -t $(acrName).azurecr.io/$(imageName):$(Build.BuildId) .
-
-        Write-Output "Pushing image to ACR..."
-        docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
-      displayName: 'Build and Push Docker image'
-
-    # Deploy to AKS
+    # 2) Deploy to AKS (create if not exists, else update)
     - task: AzureCLI@2
       displayName: 'Deploy to AKS'
       inputs:
@@ -55,10 +42,21 @@ stages:
           Write-Output "Connecting to AKS..."
           az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
 
-          Write-Output "Updating deployment with new image..."
-          kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
+          $deployName = "$(imageName)"
+          $image = "$(acrName).azurecr.io/$(imageName):$(Build.BuildId)"
+
+          Write-Output "Checking if deployment exists..."
+          $exists = kubectl get deployment $deployName --ignore-not-found
+
+          if ($exists) {
+            Write-Output "Deployment exists. Updating image..."
+            kubectl set image deployment/$deployName $deployName=$image
+          }
+          else {
+            Write-Output "Deployment not found. Creating new deployment..."
+            kubectl create deployment $deployName --image=$image
+            kubectl expose deployment $deployName --type=LoadBalancer --port=80 --target-port=80
+          }
 
           Write-Output "Waiting for rollout..."
-         
-
-          Write-Output "Deployment complete!"
+          kubectl rollout status deployment/$deployName

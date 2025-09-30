@@ -1,8 +1,25 @@
-bin/
-obj/
-<<<<<<< HEAD
-=======
-*.md
-*.user
-*.vs
->>>>>>> c460120f11992e94cfdb07e52c9fab382112d03e
+**/.classpath
+**/.dockerignore
+**/.env
+**/.git
+**/.gitignore
+**/.project
+**/.settings
+**/.toolstarget
+**/.vs
+**/.vscode
+**/*.*proj.user
+**/*.dbmdl
+**/*.jfm
+**/bin
+**/charts
+**/docker-compose*
+**/compose*
+**/Dockerfile*
+**/node_modules
+**/npm-debug.log
+**/obj
+**/secrets.dev.yaml
+**/values.dev.yaml
+LICENSE
+README.md

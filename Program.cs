@@ -16,23 +16,16 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "NOIDA"
-};
+
 
 app.MapGet("/weatherforecast", () =>
 {
 
    
-    return "sandeep karan cicd with devops";
+    return "sandeep karan cicd with devops sandeep";
 })
-.WithName("GetWeatherForecast")
+.WithName("weatherforecast")
 .WithOpenApi();
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

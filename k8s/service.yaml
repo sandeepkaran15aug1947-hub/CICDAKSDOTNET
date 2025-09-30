@@ -1,11 +1,47 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: mydotnetapp-service
-spec:
-  type: LoadBalancer
-  selector:
-    app: mydotnetapp
-  ports:
-    - port: 80
-      targetPort: 8080
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  acrName: 'myacr123456r'               # <--- your ACR name (no .azurecr.io)
+  resourceGroup: 'myResourceGroup'   # <--- your resource group
+  aksCluster: 'myAksCluster'         # <--- AKS cluster name
+  imageName: 'mydotnetapp'           # <--- repo + image name in ACR
+  azureServiceConnection: 'cicdak' # <--- DevOps service connection name
+
+stages:
+- stage: BuildAndDeploy
+  displayName: Build in ACR and Deploy to AKS
+  jobs:
+  - job: BuildAndDeployJob
+    displayName: Build and Deploy
+    pool:
+      name: 'aks'
+
+    steps:
+    - script: echo "Starting pipeline..."
+      displayName: 'Start'
+
+    # Build in ACR (recommended)
+    - task: AzureCLI@2
+      displayName: 'Build image in ACR (az acr build)'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          # Build and push image to ACR with a unique tag (BuildId)
+          az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
+
+    # Deploy to AKS
+    - task: AzureCLI@2
+      displayName: 'Deploy to AKS (kubectl set image & rollout)'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
+          kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
+          kubectl rollout status deployment/mydotnetapp

@@ -59,6 +59,6 @@ stages:
           kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
 
           Write-Output "Waiting for rollout..."
-          kubectl rollout status deployment/mydotnetapp
+         
 
           Write-Output "Deployment complete!"

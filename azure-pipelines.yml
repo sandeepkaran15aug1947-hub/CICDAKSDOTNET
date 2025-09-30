@@ -4,50 +4,49 @@ trigger:
       - main
 
 variables:
-  acrName: 'myacr123456r'
-  resourceGroup: 'myResourceGroup'
-  aksCluster: 'myAksCluster'
-  imageName: 'mydotnetapp'
-  azureServiceConnection: 'cicdak'
+  # CHANGE THESE
+  acrName: 'myacr123456r'                     # your ACR name (no .azurecr.io)
+  resourceGroup: 'myResourceGroup'         # your RG
+  aksCluster: 'myAKSCluster'               # your AKS cluster name
+  imageName: 'mydotnetapp'                 # repository name in ACR
+  azureServiceConnection: 'cicdak' # service connection name in Azure DevOps
 
 stages:
 - stage: BuildAndDeploy
-  displayName: Build in ACR and Deploy to AKS
+  displayName: Build (ACR) + Deploy (AKS)
   jobs:
   - job: BuildAndDeployJob
-    displayName: Build and Deploy
+    displayName: Build image in ACR and deploy to AKS
     pool:
-      name: 'aks'   # 👈 your Windows self-hosted agent
-
+      name: aks
     steps:
-    - powershell: |
-        Write-Output "Starting pipeline..."
-      displayName: 'Start Pipeline'
 
+    # 1) Build & push inside Azure (no local docker required)
     - task: AzureCLI@2
-      displayName: 'Build image in ACR'
+      displayName: 'Build image in ACR (az acr build)'
       inputs:
         azureSubscription: $(azureServiceConnection)
-        scriptType: ps   # 👈 PowerShell instead of bash
+        scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          Write-Output "Building Docker image in ACR..."
+          echo "Building image with ACR Tasks..."
+          # uses repo root Dockerfile by default; change --file if your Dockerfile is elsewhere
           az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
 
+    # 2) Deploy to AKS: get creds then update deployment image
     - task: AzureCLI@2
-      displayName: 'Deploy to AKS'
+      displayName: 'Deploy to AKS (kubectl set image)'
       inputs:
         azureSubscription: $(azureServiceConnection)
-        scriptType: ps
+        scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          Write-Output "Connecting to AKS..."
+          echo "Getting AKS credentials..."
           az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
 
-          Write-Output "Updating deployment..."
+          # Update the k8s deployment's container image (change deployment name/container name if needed)
+          echo "Setting new image on deployment..."
           kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
 
-          Write-Output "Waiting for rollout..."
+          # Wait for rollout
           kubectl rollout status deployment/mydotnetapp
-
-          Write-Output "Deployment complete!"

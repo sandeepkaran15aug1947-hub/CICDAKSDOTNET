@@ -4,11 +4,11 @@ trigger:
       - main
 
 variables:
-  acrName: 'myacr123456r'               # <--- your ACR name (no .azurecr.io)
-  resourceGroup: 'myResourceGroup'   # <--- your resource group
-  aksCluster: 'myAksCluster'         # <--- AKS cluster name
-  imageName: 'mydotnetapp'           # <--- repo + image name in ACR
-  azureServiceConnection: 'cicdak' # <--- DevOps service connection name
+  acrName: 'myacr123456r'
+  resourceGroup: 'myResourceGroup'
+  aksCluster: 'myAksCluster'
+  imageName: 'mydotnetapp'
+  azureServiceConnection: 'cicdak'
 
 stages:
 - stage: BuildAndDeploy
@@ -17,31 +17,37 @@ stages:
   - job: BuildAndDeployJob
     displayName: Build and Deploy
     pool:
-      name: aks
+      name: 'aks'   # 👈 your Windows self-hosted agent name
 
     steps:
-    - script: echo "Starting pipeline..."
-      displayName: 'Start'
+    - powershell: |
+        Write-Output "🚀 Starting pipeline..."
+      displayName: 'Start Pipeline'
 
-    # Build in ACR (recommended)
     - task: AzureCLI@2
       displayName: 'Build image in ACR (az acr build)'
       inputs:
         azureSubscription: $(azureServiceConnection)
-        scriptType: bash
+        scriptType: ps   # 👈 PowerShell instead of bash
         scriptLocation: inlineScript
         inlineScript: |
-          # Build and push image to ACR with a unique tag (BuildId)
+          Write-Output "🔨 Building Docker image in ACR..."
           az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
 
-    # Deploy to AKS
     - task: AzureCLI@2
       displayName: 'Deploy to AKS (kubectl set image & rollout)'
       inputs:
         azureSubscription: $(azureServiceConnection)
-        scriptType: bash
+        scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
+          Write-Output "⛴️ Connecting to AKS..."
           az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
+
+          Write-Output "📦 Updating deployment..."
           kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
+
+          Write-Output "🔍 Waiting for rollout..."
           kubectl rollout status deployment/mydotnetapp
+
+          Write-Output "✅ Deployment complete!"

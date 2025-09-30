@@ -1,19 +1,47 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
-- main
+  branches:
+    include:
+      - main
 
-pool:
-  name: aks
+variables:
+  acrName: 'myacr123456r'               # <--- your ACR name (no .azurecr.io)
+  resourceGroup: 'myResourceGroup'   # <--- your resource group
+  aksCluster: 'myAksCluster'         # <--- AKS cluster name
+  imageName: 'mydotnetapp'           # <--- repo + image name in ACR
+  azureServiceConnection: 'cicdak' # <--- DevOps service connection name
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+stages:
+- stage: BuildAndDeploy
+  displayName: Build in ACR and Deploy to AKS
+  jobs:
+  - job: BuildAndDeployJob
+    displayName: Build and Deploy
+    pool:
+      name: aks
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+    steps:
+    - script: echo "Starting pipeline..."
+      displayName: 'Start'
+
+    # Build in ACR (recommended)
+    - task: AzureCLI@2
+      displayName: 'Build image in ACR (az acr build)'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          # Build and push image to ACR with a unique tag (BuildId)
+          az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
+
+    # Deploy to AKS
+    - task: AzureCLI@2
+      displayName: 'Deploy to AKS (kubectl set image & rollout)'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
+          kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
+          kubectl rollout status deployment/mydotnetapp

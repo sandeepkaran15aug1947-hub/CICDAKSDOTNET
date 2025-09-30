@@ -12,37 +12,27 @@ variables:
 
 stages:
 - stage: BuildAndDeploy
-  displayName: Build Docker image locally and Deploy to AKS
+  displayName: Build in ACR and Deploy to AKS
   jobs:
   - job: BuildAndDeployJob
     displayName: Build and Deploy
     pool:
-      name: 'aks'   # 👈 your Windows self-hosted agent
+      vmImage: 'windows-latest'   # 👈 use windows agent
 
     steps:
     - powershell: |
         Write-Output "Starting pipeline..."
       displayName: 'Start Pipeline'
 
-    # Login to ACR
+    # Build image in ACR
     - task: AzureCLI@2
-      displayName: 'Login to ACR'
+      displayName: 'Build image in ACR'
       inputs:
         azureSubscription: $(azureServiceConnection)
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-          Write-Output "Logging in to ACR..."
-          az acr login --name $(acrName)
-
-    # Build & Push image locally
-    - powershell: |
-        Write-Output "Building Docker image locally..."
-        docker build -t $(acrName).azurecr.io/$(imageName):$(Build.BuildId) .
-
-        Write-Output "Pushing image to ACR..."
-        docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
-      displayName: 'Build and Push Docker image'
+          az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
 
     # Deploy to AKS
     - task: AzureCLI@2
@@ -52,13 +42,10 @@ stages:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-          Write-Output "Connecting to AKS..."
           az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
 
-          Write-Output "Updating deployment with new image..."
-          kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
+          # update deployment with new image
+          kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId)
 
-          Write-Output "Waiting for rollout..."
+          # wait until rollout is complete
           kubectl rollout status deployment/mydotnetapp
-
-          Write-Output "Deployment complete!"

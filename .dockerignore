@@ -1,2 +1,8 @@
 bin/
 obj/
+<<<<<<< HEAD
+=======
+*.md
+*.user
+*.vs
+>>>>>>> c460120f11992e94cfdb07e52c9fab382112d03e

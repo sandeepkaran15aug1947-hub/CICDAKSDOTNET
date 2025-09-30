@@ -1,0 +1,53 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  acrName: 'myacr123456r'
+  resourceGroup: 'myResourceGroup'
+  aksCluster: 'myAksCluster'
+  imageName: 'mydotnetapp'
+  azureServiceConnection: 'cicdak'
+
+stages:
+- stage: BuildAndDeploy
+  displayName: Build in ACR and Deploy to AKS
+  jobs:
+  - job: BuildAndDeployJob
+    displayName: Build and Deploy
+    pool:
+      name: aks   
+
+    steps:
+    - powershell: |
+        Write-Output "🚀 Starting pipeline..."
+      displayName: 'Start Pipeline'
+
+    - task: AzureCLI@2
+      displayName: 'Build image in ACR (az acr build)'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: ps   # 👈 PowerShell instead of bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          Write-Output "🔨 Building Docker image in ACR..."
+          az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
+
+    - task: AzureCLI@2
+      displayName: 'Deploy to AKS (kubectl set image & rollout)'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          Write-Output "⛴️ Connecting to AKS..."
+          az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
+
+          Write-Output "📦 Updating deployment..."
+          kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
+
+          Write-Output "🔍 Waiting for rollout..."
+          kubectl rollout status deployment/mydotnetapp
+
+          Write-Output "✅ Deployment complete!"

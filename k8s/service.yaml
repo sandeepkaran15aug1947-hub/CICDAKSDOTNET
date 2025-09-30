@@ -1,0 +1,46 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  acrName: 'myacr123456r'               # ACR name (without .azurecr.io)
+  resourceGroup: 'myResourceGroup'      # Resource group name
+  aksCluster: 'myAksCluster'            # AKS cluster name
+  imageName: 'mydotnetapp'              # Image repo name
+  azureServiceConnection: 'cicdak'      # Azure DevOps service connection
+
+stages:
+- stage: BuildAndDeploy
+  displayName: Build in ACR and Deploy to AKS
+  jobs:
+  - job: BuildAndDeployJob
+    displayName: Build and Deploy
+    pool:
+      vmImage: 'ubuntu-latest'   # 👈 use Linux hosted agent
+
+    steps:
+    - script: echo "Starting pipeline..."
+      displayName: 'Start'
+
+    # Build in ACR
+    - task: AzureCLI@2
+      displayName: 'Build image in ACR (az acr build)'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
+
+    # Deploy to AKS
+    - task: AzureCLI@2
+      displayName: 'Deploy to AKS (kubectl set image & rollout)'
+      inputs:
+        azureSubscription: $(azureServiceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
+          kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
+          kubectl rollout status deployment/mydotnetapp

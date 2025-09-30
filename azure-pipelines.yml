@@ -17,7 +17,7 @@ stages:
   - job: BuildAndDeployJob
     displayName: Build and Deploy
     pool:
-      vmImage: 'windows-latest'   # Windows agent
+      name: aks   # Windows agent
 
     steps:
     - powershell: |

@@ -44,7 +44,7 @@ stages:
         docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
       displayName: 'Build and Push Docker image'
 
-            # Deploy to AKS
+    # Deploy to AKS
     - task: AzureCLI@2
       displayName: 'Deploy to AKS'
       inputs:
@@ -55,14 +55,10 @@ stages:
           Write-Output "Connecting to AKS..."
           az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
 
-          Write-Output "Applying Kubernetes manifests..."
-          kubectl apply -f k8s/deployment.yaml
-
-          Write-Output "Updating deployment image..."
+          Write-Output "Updating deployment with new image..."
           kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
 
           Write-Output "Waiting for rollout..."
           kubectl rollout status deployment/mydotnetapp
 
           Write-Output "Deployment complete!"
-

@@ -4,11 +4,11 @@ trigger:
       - main
 
 variables:
-  acrName: 'myacr123456r'               # <--- your ACR name (no .azurecr.io)
-  resourceGroup: 'myResourceGroup'   # <--- your resource group
-  aksCluster: 'myAksCluster'         # <--- AKS cluster name
-  imageName: 'mydotnetapp'           # <--- repo + image name in ACR
-  azureServiceConnection: 'cicdak' # <--- DevOps service connection name
+  acrName: 'myacr123456r'               # ACR name (without .azurecr.io)
+  resourceGroup: 'myResourceGroup'      # Resource group name
+  aksCluster: 'myAksCluster'            # AKS cluster name
+  imageName: 'mydotnetapp'              # Image repo name
+  azureServiceConnection: 'cicdak'      # Azure DevOps service connection
 
 stages:
 - stage: BuildAndDeploy
@@ -17,13 +17,13 @@ stages:
   - job: BuildAndDeployJob
     displayName: Build and Deploy
     pool:
-      name: aks
+      vmImage: 'ubuntu-latest'   # 👈 use Linux hosted agent
 
     steps:
     - script: echo "Starting pipeline..."
       displayName: 'Start'
 
-    # Build in ACR (recommended)
+    # Build in ACR
     - task: AzureCLI@2
       displayName: 'Build image in ACR (az acr build)'
       inputs:
@@ -31,7 +31,6 @@ stages:
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          # Build and push image to ACR with a unique tag (BuildId)
           az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
 
     # Deploy to AKS

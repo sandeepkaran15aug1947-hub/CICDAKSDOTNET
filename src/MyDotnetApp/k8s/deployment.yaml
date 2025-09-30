@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mydotnetapp-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mydotnetapp
+  template:
+    metadata:
+      labels:
+        app: mydotnetapp
+    spec:
+      containers:
+        - name: mydotnetapp
+          image: myacr123456r.azurecr.io/mydotnetapp:v2
+          ports:
+            - containerPort: 80

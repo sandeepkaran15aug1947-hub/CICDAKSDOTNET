@@ -19,6 +19,7 @@ C:\MyDotnetApp\src\MyDotnetApp\obj\Debug\net8.0\MyDotnetApp.AssemblyInfo.cs
 C:\MyDotnetApp\src\MyDotnetApp\obj\Debug\net8.0\MyDotnetApp.csproj.CoreCompileInputs.cache
 C:\MyDotnetApp\src\MyDotnetApp\obj\Debug\net8.0\MyDotnetApp.MvcApplicationPartsAssemblyInfo.cs
 C:\MyDotnetApp\src\MyDotnetApp\obj\Debug\net8.0\MyDotnetApp.MvcApplicationPartsAssemblyInfo.cache
+C:\MyDotnetApp\src\MyDotnetApp\obj\Debug\net8.0\MyDotnetApp.sourcelink.json
 C:\MyDotnetApp\src\MyDotnetApp\obj\Debug\net8.0\rjimswa.dswa.cache.json
 C:\MyDotnetApp\src\MyDotnetApp\obj\Debug\net8.0\rjsmrazor.dswa.cache.json
 C:\MyDotnetApp\src\MyDotnetApp\obj\Debug\net8.0\rjsmcshtml.dswa.cache.json

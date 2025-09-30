@@ -1,9 +1,11 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mydotnetapp-deployment
+  name: mydotnetapp   # 👈 CHANGE: match pipeline
+  labels:
+    app: mydotnetapp
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: mydotnetapp
@@ -13,7 +15,7 @@ spec:
         app: mydotnetapp
     spec:
       containers:
-        - name: mydotnetapp
-          image: myacr123456r.azurecr.io/mydotnetapp:v2
-          ports:
-            - containerPort: 80
+      - name: mydotnetapp
+        image: myacr123456r.azurecr.io/mydotnetapp:latest
+        ports:
+        - containerPort: 80

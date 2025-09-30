@@ -488,11 +488,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\MyDotnetApp\\src\\MyDotnetApp\\MyDotnetApp.csproj",
+      "projectUniqueName": "C:\\MyDotnetApp\\MyDotnetApp.csproj",
       "projectName": "MyDotnetApp",
-      "projectPath": "C:\\MyDotnetApp\\src\\MyDotnetApp\\MyDotnetApp.csproj",
+      "projectPath": "C:\\MyDotnetApp\\MyDotnetApp.csproj",
       "packagesPath": "C:\\Users\\SANDEEP\\.nuget\\packages\\",
-      "outputPath": "C:\\MyDotnetApp\\src\\MyDotnetApp\\obj\\",
+      "outputPath": "C:\\MyDotnetApp\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

@@ -12,7 +12,7 @@ variables:
 
 stages:
 - stage: BuildAndDeploy
-  displayName: Build in ACR and Deploy to AKS
+  displayName: Build Docker image locally and Deploy to AKS
   jobs:
   - job: BuildAndDeployJob
     displayName: Build and Deploy
@@ -24,16 +24,27 @@ stages:
         Write-Output "Starting pipeline..."
       displayName: 'Start Pipeline'
 
+    # Login to ACR
     - task: AzureCLI@2
-      displayName: 'Build image in ACR'
+      displayName: 'Login to ACR'
       inputs:
         azureSubscription: $(azureServiceConnection)
-        scriptType: ps   # 👈 PowerShell instead of bash
+        scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-          Write-Output "Building Docker image in ACR..."
-          az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
+          Write-Output "Logging in to ACR..."
+          az acr login --name $(acrName)
 
+    # Build & Push image locally
+    - powershell: |
+        Write-Output "Building Docker image locally..."
+        docker build -t $(acrName).azurecr.io/$(imageName):$(Build.BuildId) .
+
+        Write-Output "Pushing image to ACR..."
+        docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
+      displayName: 'Build and Push Docker image'
+
+    # Deploy to AKS
     - task: AzureCLI@2
       displayName: 'Deploy to AKS'
       inputs:
@@ -44,7 +55,7 @@ stages:
           Write-Output "Connecting to AKS..."
           az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
 
-          Write-Output "Updating deployment..."
+          Write-Output "Updating deployment with new image..."
           kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
 
           Write-Output "Waiting for rollout..."

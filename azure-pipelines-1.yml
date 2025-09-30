@@ -17,7 +17,7 @@ stages:
   - job: BuildAndDeployJob
     displayName: Build and Deploy
     pool:
-      name: 'aks'   # 👈 your Windows self-hosted agent name
+      name: aks   
 
     steps:
     - powershell: |

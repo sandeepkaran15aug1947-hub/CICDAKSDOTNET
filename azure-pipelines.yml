@@ -26,7 +26,7 @@ stages:
       displayName: 'Build image in ACR (az acr build)'
       inputs:
         azureSubscription: $(azureServiceConnection)
-        scriptType: pscore
+        scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
           echo "Building image with ACR Tasks..."

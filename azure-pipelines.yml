@@ -12,27 +12,37 @@ variables:
 
 stages:
 - stage: BuildAndDeploy
-  displayName: Build in ACR and Deploy to AKS
+  displayName: Build Docker image locally and Deploy to AKS
   jobs:
   - job: BuildAndDeployJob
     displayName: Build and Deploy
     pool:
-      name: aks   # 👈 use windows agent
+      name: 'aks'   # 👈 your Windows self-hosted agent
 
     steps:
     - powershell: |
         Write-Output "Starting pipeline..."
       displayName: 'Start Pipeline'
 
-    # Build image in ACR
+    # Login to ACR
     - task: AzureCLI@2
-      displayName: 'Build image in ACR'
+      displayName: 'Login to ACR'
       inputs:
         azureSubscription: $(azureServiceConnection)
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
-          az acr build --registry $(acrName) --image $(imageName):$(Build.BuildId) .
+          Write-Output "Logging in to ACR..."
+          az acr login --name $(acrName)
+
+    # Build & Push image locally
+    - powershell: |
+        Write-Output "Building Docker image locally..."
+        docker build -t $(acrName).azurecr.io/$(imageName):$(Build.BuildId) .
+
+        Write-Output "Pushing image to ACR..."
+        docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
+      displayName: 'Build and Push Docker image'
 
     # Deploy to AKS
     - task: AzureCLI@2
@@ -42,10 +52,13 @@ stages:
         scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
+          Write-Output "Connecting to AKS..."
           az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
 
-          # update deployment with new image
-          kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId)
+          Write-Output "Updating deployment with new image..."
+          kubectl set image deployment/mydotnetapp mydotnetapp=$(acrName).azurecr.io/$(imageName):$(Build.BuildId) --record
 
-          # wait until rollout is complete
+          Write-Output "Waiting for rollout..."
           kubectl rollout status deployment/mydotnetapp
+
+          Write-Output "Deployment complete!"
